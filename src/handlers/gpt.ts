@@ -145,6 +145,8 @@ export async function gptAsk(context: Context, question: string | null, chatHist
 
   const answer = res.choices[0].message.content;
 
+  console.log(answer);
+
   const tokenUsage = {
     output: res.usage?.completion_tokens,
     input: res.usage?.prompt_tokens,

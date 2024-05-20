@@ -1,6 +1,6 @@
 plugins:
-  issue_comment.created: # or any other event
-    - uses: # sequence of plugins to run
+  issue_comment.created:
+    - uses:
         - plugin: ubq-testing/issue-spec-rewrite:compute.yml@development
           name: issue-spec-rewrite
           id: issue-spec-rewrite
