@@ -70,6 +70,8 @@ export default async function plugin() {
     return;
   }
 
+  console.log(context.eventName);
+
   if (context.eventName === "issue_comment.created") {
     const rewritten = await rewrite(context);
 

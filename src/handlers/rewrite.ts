@@ -7,11 +7,9 @@ import { gptAsk, gptDecideContext, sysMsg } from "./gpt";
 export async function rewrite(context: Context) {
   const { payload } = context;
   const body = payload.comment.body;
-
-  const regex = /\/rewrite/;
+  // /rewrite
+  const regex = /\/rewrite (.*)/;
   const matches = body?.match(regex);
-
-  console.log(matches);
 
   if (matches) {
     return await processComment(context);

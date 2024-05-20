@@ -8,14 +8,11 @@ import { addCommentToIssue } from "../utils/add-comment";
 
 export const sysMsg = `
 You are the UbiquityAI, a context aware Github assistant, designed to update issue specifications. \n
-Based on the report you are given and the current state of the issue, you are to decide if the spec needs updating. \n
+- Based on the report you are given and the current state of the issue, you are to decide if the spec needs updating. \n
+- If a new issue is warranted, suggest it in the footnotes of the spec. \n
+- Maintain the current format and structure of the issue body, you are not to stylize and reformat the entire body, only update the spec if required. \n
 
-If changes are to be made ensure that the original spec is preserved and the new changes are clearly marked. \n
-If a new issue is warranted, suggest it in the footnotes of the spec. \n
-
-Maintain the current format and structure of the issue body, you are not to stylize and reformat the entire body, only update the spec if required. \n
-
-Format your response using GitHub Flavored Markdown. Utilize tables, lists, and code blocks for clear and concise specifications. \n
+When calling "update_spec" know that you are directly editing the issue body, so changes must be exact, without error and you must do so without comment or directive. \n
 `;
 
 const contextMsg = `
@@ -141,9 +138,29 @@ export async function gptAsk(context: Context, question: string | null, chatHist
     messages: chatHistory,
     model: "gpt-3.5-turbo-16k",
     temperature: 0,
+    tool_choice: "auto",
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "update_spec",
+          description: "Directly updates the issue body with the new spec.",
+          parameters: {
+            type: "object",
+            properties: {
+              spec: {
+                type: "string",
+                description: "The new spec to update the issue body with.",
+              },
+            },
+            required: ["spec"],
+          },
+        },
+      },
+    ],
   });
 
-  const answer = res.choices[0].message.content;
+  const answer = await processFunctionCall(context, res);
 
   console.log(answer);
 
@@ -158,4 +175,47 @@ export async function gptAsk(context: Context, question: string | null, chatHist
   }
 
   return { answer, tokenUsage };
+}
+
+async function processFunctionCall(content: Context, res: OpenAI.Chat.Completions.ChatCompletion) {
+  const resMsg = res.choices[0].message;
+  const toolCalls = resMsg.tool_calls;
+  if (toolCalls) {
+    for (const toolCall of toolCalls) {
+      if (toolCall.function.name === "update_spec") {
+        const functionArgs = JSON.parse(toolCall.function.arguments);
+
+        const isUpdated = await updateSpec(content, functionArgs.spec);
+
+        if (!isUpdated) {
+          return "Error updating spec";
+        }
+
+        return "Spec updated successfully";
+      }
+    }
+  } else {
+    return resMsg.content;
+  }
+}
+
+async function updateSpec(content: Context, body: string) {
+  const { octokit, payload } = content;
+  const issue = payload.issue;
+  const repo = payload.repository;
+  const issueNumber = issue.number;
+  const owner = repo.owner.login;
+  const repoName = repo.name;
+  try {
+    await octokit.issues.update({
+      owner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body,
+    });
+    return true;
+  } catch (e) {
+    console.log(e);
+    return false;
+  }
 }
