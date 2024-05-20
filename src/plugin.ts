@@ -71,7 +71,11 @@ export default async function plugin() {
   }
 
   if (context.eventName === "issue_comment.created") {
-    await rewrite(context);
+    const rewritten = await rewrite(context);
+
+    if (rewritten) {
+      await addCommentToIssue(context, rewritten);
+    }
   } else {
     throw new Error(`Unsupported event: ${context.eventName}`);
   }

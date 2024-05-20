@@ -3,18 +3,18 @@ import { Context } from "../types/context";
 import { StreamlinedComment, UserType } from "../types/response";
 import { getAllIssueComments, getAllLinkedIssuesAndPullsInBody } from "../utils/get-issue-comments";
 import { gptAsk, gptDecideContext, sysMsg } from "./gpt";
-import { addCommentToIssue } from "../utils/add-comment";
 
 export async function rewrite(context: Context) {
   const { payload } = context;
   const body = payload.comment.body;
 
-  const regex = /^\/rewrite\s(.+)$/;
+  const regex = /\/rewrite/;
   const matches = body?.match(regex);
 
+  console.log(matches);
+
   if (matches) {
-    const comment = await processComment(context);
-    return await addCommentToIssue(context, comment);
+    return await processComment(context);
   }
 
   return "Invalid syntax for rewrite \n usage: '/rewrite What is pi?";
