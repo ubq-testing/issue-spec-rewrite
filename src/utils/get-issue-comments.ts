@@ -102,7 +102,7 @@ export async function getAllLinkedIssuesAndPullsInBody(context: Context, reposit
   }
 
   const body = issue.body;
-  const linkedPRStreamlined: StreamlinedComment[] = [];
+  const linkedPullStreamlined: StreamlinedComment[] = [];
   const linkedIssueStreamlined: StreamlinedComment[] = [];
 
   const regex = /https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(issues|pull)\/(\d+)/gi;
@@ -151,7 +151,7 @@ export async function getAllLinkedIssuesAndPullsInBody(context: Context, reposit
           const pr = await getPullByNumber(context, linkedPrs[i]);
 
           if (pr) {
-            linkedPRStreamlined.push({
+            linkedPullStreamlined.push({
               login: "system",
               body: `=============== Pull Request #${pr.number}: ${pr.title} + ===============\n ${pr.body}}`,
             });
@@ -170,7 +170,7 @@ export async function getAllLinkedIssuesAndPullsInBody(context: Context, reposit
             if (!prComments) return;
             prComments.forEach(async (comment, i) => {
               if (comment.user.type == UserType.User || prComments[i].body.includes("<!--- { 'UbiquityAI': 'answer' } --->")) {
-                linkedPRStreamlined.push({
+                linkedPullStreamlined.push({
                   login: comment.user.login,
                   body: comment.body,
                 });
@@ -215,7 +215,7 @@ export async function getAllLinkedIssuesAndPullsInBody(context: Context, reposit
 
       return {
         linkedIssues: linkedIssueStreamlined,
-        linkedPrs: linkedPRStreamlined,
+        linkedPrs: linkedPullStreamlined,
       };
     } catch (error) {
       logger.info(`Error getting linked issues or prs: ${error}`);

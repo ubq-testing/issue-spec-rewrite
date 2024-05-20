@@ -1,17 +1,21 @@
 import OpenAI from "openai";
 import { CreateChatCompletionRequestMessage } from "openai/resources/chat";
-import { getAllIssueComments, getAllLinkedIssuesAndPullsInBody } from "../utils/getIssueComments";
+import { getAllIssueComments, getAllLinkedIssuesAndPullsInBody } from "../utils/get-issue-comments";
 import { StreamlinedComment, UserType } from "../types/response";
 import { Issue } from "@octokit/webhooks-types";
 import { Context } from "../types/context";
-import { addCommentToIssue } from "../utils/addComment";
+import { addCommentToIssue } from "../utils/add-comment";
 
-export const sysMsg = `You are the UbiquityAI, designed to provide accurate technical answers. \n
-Whenever appropriate, format your response using GitHub Flavored Markdown. Utilize tables, lists, and code blocks for clear and organized answers. \n
-Do not make up answers. If you are unsure, say so. \n
-Original Context exists only to provide you with additional information to the current question, use it to formulate answers. \n
-Infer the context of the question from the Original Context using your best judgement. \n
-All replies MUST end with "\n\n <!--- { 'UbiquityAI': 'answer' } ---> ".\n
+export const sysMsg = `
+You are the UbiquityAI, a context aware Github assistant, designed to update issue specifications. \n
+Using the conversational context spanning the issue, linked issues and pull requests, you are to update the issue spec. \n
+A spec should be updated only if the conversation warrants it, you are to use your best judgement. \n
+
+Based on the original spec, you are to update the issue body with the most relevant information while maintaining the original context of the issue. \n
+If you believe that the conversation warrants a new issue entirely, you are to suggest in the footnotes of the spec. \n
+A new issue is only warranted if the conversation implies changes that are wholly different from the original issue, within a reasonable extent. \n
+
+Format your response using GitHub Flavored Markdown. Utilize tables, lists, and code blocks for clear and concise specifications. \n
 `;
 
 /**
