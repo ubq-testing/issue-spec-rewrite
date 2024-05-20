@@ -63,10 +63,10 @@ export default async function plugin() {
   const context = await setup();
 
   const { disabledCommands } = context.config;
-  const isCommandDisabled = disabledCommands.some((command: string) => command === "research");
+  const isCommandDisabled = disabledCommands.some((command: string) => command === "rewrite");
   if (isCommandDisabled) {
-    context.logger.info(`/research is disabled in this repository: ${context.payload.repository.full_name}`);
-    await addCommentToIssue(context, "```diff\n# The /research command is disabled in this repository\n```");
+    context.logger.info(`/rewrite is disabled in this repository: ${context.payload.repository.full_name}`);
+    await addCommentToIssue(context, "```diff\n# The /rewrite command is disabled in this repository\n```");
     return;
   }
 
