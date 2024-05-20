@@ -1,20 +1,14 @@
 plugins:
   issue_comment.created: # or any other event
     - uses: # sequence of plugins to run
-        - plugin: <plugin-org/owner>/<plugin-repo-name>:compute.yml@development
-          name: plugin-name
-          id: plugin-name-command
-          type: github | worker
-          description: "Plugin description"
-          command: "<regex for command>" # if applicable
-          example: "<example usage>" # if applicable
-          with: # below is an example, cater to your plugin's needs
+        - plugin: ubq-testing/issue-spec-rewrite:compute.yml@development
+          name: issue-spec-rewrite
+          id: issue-spec-rewrite
+          type: github 
+          description: "Allows GPT to rewrite the issue spec based on the evolution of the conversation across comments and linked issues."
+          command:  "/rewrite" 
+          example: "/rewrite"
+          with: 
+            keys:
+              openAi: ""
             disabledCommands: []
-            timers:
-              reviewDelayTolerance: 86000
-              taskStaleTimeoutDuration: 2580000
-            miscellaneous:
-              maxConcurrentTasks: 3
-            labels:
-              time: []
-              priority: []
