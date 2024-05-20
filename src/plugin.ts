@@ -7,6 +7,8 @@ import { Database } from "./adapters/supabase/types/database";
 import { Context } from "./types/context";
 import { envSchema } from "./types/env";
 import { pluginSettingsSchema, PluginInputs } from "./types/plugin-inputs";
+import { addCommentToIssue } from "./utils/add-comment";
+import { rewrite } from "./handlers/rewrite";
 
 async function setup() {
   const payload = github.context.payload.inputs;
@@ -60,6 +62,17 @@ async function setup() {
 export default async function plugin() {
   const context = await setup();
 
-  // Add your plugin logic here
-  context.logger.info("Hello, World!");
+  const { disabledCommands } = context.config;
+  const isCommandDisabled = disabledCommands.some((command: string) => command === "research");
+  if (isCommandDisabled) {
+    context.logger.info(`/research is disabled in this repository: ${context.payload.repository.full_name}`);
+    await addCommentToIssue(context, "```diff\n# The /research command is disabled in this repository\n```");
+    return;
+  }
+
+  if (context.eventName === "issue_comment.created") {
+    await rewrite(context);
+  } else {
+    throw new Error(`Unsupported event: ${context.eventName}`);
+  }
 }

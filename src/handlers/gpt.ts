@@ -1,21 +1,42 @@
 import OpenAI from "openai";
 import { CreateChatCompletionRequestMessage } from "openai/resources/chat";
-import { getAllIssueComments, getAllLinkedIssuesAndPullsInBody } from "../utils/get-issue-comments";
-import { StreamlinedComment, UserType } from "../types/response";
+import { getAllLinkedIssuesAndPullsInBody } from "../utils/get-issue-comments";
+import { StreamlinedComment } from "../types/response";
 import { Issue } from "@octokit/webhooks-types";
 import { Context } from "../types/context";
 import { addCommentToIssue } from "../utils/add-comment";
 
 export const sysMsg = `
 You are the UbiquityAI, a context aware Github assistant, designed to update issue specifications. \n
-Using the conversational context spanning the issue, linked issues and pull requests, you are to update the issue spec. \n
-A spec should be updated only if the conversation warrants it, you are to use your best judgement. \n
+Based on the report you are given and the current state of the issue, you are to decide if the spec needs updating. \n
 
-Based on the original spec, you are to update the issue body with the most relevant information while maintaining the original context of the issue. \n
-If you believe that the conversation warrants a new issue entirely, you are to suggest in the footnotes of the spec. \n
-A new issue is only warranted if the conversation implies changes that are wholly different from the original issue, within a reasonable extent. \n
+If changes are to be made ensure that the original spec is preserved and the new changes are clearly marked. \n
+If a new issue is warranted, suggest it in the footnotes of the spec. \n
+
+Maintain the current format and structure of the issue body, you are not to stylize and reformat the entire body, only update the spec if required. \n
 
 Format your response using GitHub Flavored Markdown. Utilize tables, lists, and code blocks for clear and concise specifications. \n
+`;
+
+const contextMsg = `
+Using the conversational context spanning the issue, linked issues and pull requests, you are to decide if the spec needs updating. \n
+
+- More weight should be given to the comments from the issue author as they'll likely have the clearest vision. \n
+- A spec should be updated only if the conversation warrants it, you are to use your best judgement. \n
+- If you believe that the conversation warrants a new issue entirely, you are to suggest in the footnotes of the spec. \n
+- A new issue is only warranted if the conversation implies changes that are wholly different from the original issue, within a reasonable extent. \n
+
+Your response should aim to collect all of the relevant information from the conversation to make an informed decision. \n
+That decision is not yours to make, just collect the information and present it in a report-like manner. \n
+
+Example:
+
+Based on the conversation, the issue spec should be updated to include the following: \n
+...
+This is because bob said this was needed and alice agreed. \n
+...
+it was implied here that changes to repo x was needed, so this may require a new issue. \n
+...
 `;
 
 /**
@@ -29,7 +50,6 @@ export async function gptDecideContext(
   context: Context,
   repository: Context["payload"]["repository"],
   issue: Context["payload"]["issue"] | Issue | undefined,
-  chatHistory: CreateChatCompletionRequestMessage[],
   streamlined: StreamlinedComment[],
   linkedPullStreamlined: StreamlinedComment[],
   linkedIssueStreamlined: StreamlinedComment[]
@@ -40,31 +60,13 @@ export async function gptDecideContext(
     return;
   }
 
-  // standard comments
-  const comments = await getAllIssueComments(context, repository, issue.number);
+  const chatHistory: CreateChatCompletionRequestMessage[] = [];
+  const issueAuthor = issue.user.login;
 
-  if (!comments) {
-    logger.info(`Error getting issue comments`);
-    return;
-  }
-
-  // add the first comment of the issue/pull request
-  streamlined.push({
-    login: issue.user.login,
-    body: issue.body ?? "",
+  streamlined.forEach(async (comment) => {
+    if (comment.login === issueAuthor) comment.login = "author";
   });
 
-  // add the rest
-  comments.forEach(async (comment) => {
-    if (comment.user.type == UserType.User || comment.body.includes("<!--- { 'UbiquityAI': 'answer' } --->")) {
-      streamlined.push({
-        login: comment.user.login,
-        body: comment.body,
-      });
-    }
-  });
-
-  // returns the conversational context from all linked issues and prs
   const links = await getAllLinkedIssuesAndPullsInBody(context, repository, issue.number);
 
   if (typeof links === "string" || !links) {
@@ -76,19 +78,36 @@ export async function gptDecideContext(
 
   chatHistory.push(
     {
+      role: "system",
+      content: contextMsg,
+    },
+    {
       role: "user",
       content: "This issue/Pr context: \n" + JSON.stringify(streamlined),
-      name: "UbiquityAI",
+    },
+    {
+      role: "assistant",
+      content: "Are there any linked issues?",
     },
     {
       role: "user",
       content: "Linked issue(s) context: \n" + JSON.stringify(linkedIssueStreamlined),
-      name: "UbiquityAI",
+    },
+    {
+      role: "assistant",
+      content: "Are there any linked PRs?",
     },
     {
       role: "user",
       content: "Linked Pr(s) context: \n" + JSON.stringify(linkedPullStreamlined),
-      name: "UbiquityAI",
+    },
+    {
+      role: "assistant",
+      content: "Finally, what is the issue body?",
+    },
+    {
+      role: "user",
+      content: "Issue body: " + JSON.stringify(issue.body),
     }
   );
 
@@ -101,7 +120,7 @@ export async function gptDecideContext(
  * @param question the question to ask
  * @param chatHistory the conversational context to provide to GPT
  */
-export async function gptAsk(context: Context, question: string, chatHistory: CreateChatCompletionRequestMessage[]) {
+export async function gptAsk(context: Context, question: string | null, chatHistory: CreateChatCompletionRequestMessage[]) {
   const {
     logger,
     config: {
