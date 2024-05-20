@@ -1,4 +1,4 @@
-name: "plugin name"
+name: "Issue Spec Rewrite"
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ on:
 
 jobs:
   compute:
-    name: "plugin name"
+    name: "Issue Spec Rewrite"
     runs-on: ubuntu-latest
     permissions: write-all
     env:
@@ -39,7 +39,7 @@ jobs:
 
       - name: execute directive
         run: npx tsx ./src/main.ts
-        id: plugin-name
+        id: issue-spec-rewrite
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
