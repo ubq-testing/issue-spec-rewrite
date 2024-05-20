@@ -1,0 +1,24 @@
+# `plugin-config.yml` is a reference file only. It is not used by the plugin.
+# It is used to document the structure of the configuration file that is used by the kernel when invoking,
+# without altering the actual configuration file for the repo level, if there is one.
+
+plugins:
+  issue_comment.created: # or any other event
+    - uses: # sequence of plugins to run
+        - plugin: <plugin-org/owner>/<plugin-repo-name>:compute.yml@development
+          name: plugin-name
+          id: plugin-name-command
+          type: github | worker
+          description: "Plugin description"
+          command: "<regex for command>" # if applicable
+          example: "<example usage>" # if applicable
+          with: # below is an example, cater to your plugin's needs
+            disabledCommands: []
+            timers:
+              reviewDelayTolerance: 86000
+              taskStaleTimeoutDuration: 2580000
+            miscellaneous:
+              maxConcurrentTasks: 3
+            labels:
+              time: []
+              priority: []
