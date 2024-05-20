@@ -8,7 +8,7 @@ export async function rewrite(context: Context) {
   const { payload } = context;
   const body = payload.comment.body;
   // /rewrite
-  const regex = /\/rewrite (.*)/;
+  const regex = /\/rewrite/;
   const matches = body?.match(regex);
 
   if (matches) {
